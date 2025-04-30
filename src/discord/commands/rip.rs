@@ -4,11 +4,11 @@ use serenity::all::{
     ActionRowComponent, ComponentInteractionDataKind, Context, CreateActionRow, CreateButton,
     CreateCommand, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage,
     CreateMessage, CreateModal, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption,
-    EditMessage, InputTextStyle, Interaction, Timestamp,
+    EditInteractionResponse, EditMessage, InputTextStyle, Interaction, Timestamp,
 };
 use serenity::builder::CreateEmbed;
 
-use crate::makemkv::{get_title_info, Rip, RipType};
+use crate::makemkv::{get_drives, get_title_info, Rip, RipType};
 
 use crate::{debug, error, info, trace, warn};
 
@@ -30,26 +30,75 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                     CreateInteractionResponse::Message(
                         CreateInteractionResponseMessage::new()
                             .components(vec![])
-                            .add_embed(
+                            .embed(
                                 CreateEmbed::new()
-                                    .title("Start Rip")
-                                    .description("Please select a disc to run rip on.")
+                                    .title("Loading Discs")
+                                    .description("This may take a few seconds...")
                                     .color(0xfe0000),
-                            )
-                            .select_menu(CreateSelectMenu::new(
-                                "select_disc_to_rip",
-                                CreateSelectMenuKind::String {
-                                    options: vec![
-                                        CreateSelectMenuOption::new("Disc 1", "disc_1"),
-                                        CreateSelectMenuOption::new("Disc 2", "disc_2"),
-                                        CreateSelectMenuOption::new("Disc 3", "disc_3"),
-                                    ],
-                                },
-                            )),
+                            ),
                     ),
                 )
                 .await
-                .unwrap();
+                .unwrap_or_else(|e| {
+                    error!("Failed to create response: {:?}", e);
+                });
+
+            let drives = match get_drives().await {
+                Ok(drives) => drives,
+                Err(e) => {
+                    error!("Failed to get drives: {:?}", e);
+
+                    if let Err(e) = command
+                        .edit_response(
+                            &ctx.http,
+                            EditInteractionResponse::new().embed(
+                                CreateEmbed::new()
+                                    .title("Error")
+                                    .description(
+                                        "Failed to retrieve drives. Please try again later.",
+                                    )
+                                    .color(0xfe0000),
+                            ),
+                        )
+                        .await
+                    {
+                        error!("Failed to edit response: {:?}", e);
+                        return;
+                    }
+                    return;
+                }
+            };
+
+            let options: Vec<CreateSelectMenuOption> = drives
+                .iter()
+                .map(|drive| {
+                    CreateSelectMenuOption::new(
+                        format!("Disc {}: {}", drive.drive_number, drive.drive_media_title),
+                        format!("disc_{}", drive.drive_number),
+                    )
+                })
+                .collect();
+
+            if let Err(e) = command
+                .edit_response(
+                    &ctx.http,
+                    EditInteractionResponse::new()
+                        .components(vec![CreateActionRow::SelectMenu(CreateSelectMenu::new(
+                            "select_disc_to_rip",
+                            CreateSelectMenuKind::String { options },
+                        ))])
+                        .add_embed(
+                            CreateEmbed::new()
+                                .title("Select Disc")
+                                .description("Please select a disc to run rip on.")
+                                .color(0xfe0000),
+                        ),
+                )
+                .await
+            {
+                error!("Failed to edit response: {:?}", e);
+                return;
+            }
         }
         Interaction::Component(component) => {
             trace!("Got request from component interaction");

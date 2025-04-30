@@ -233,7 +233,11 @@ pub async fn get_drives() -> Result<Vec<Drive>> {
         if line.starts_with("DRV:") && line.contains("/dev/sr") {
             let info: Vec<&str> = line.split(",").collect();
             let disc_no: u8 = info[6][8..9].parse()?;
-            let inserted_disc = clean_str(info[5]);
+            let inserted_disc = if clean_str(info[5]) == "" {
+                "No disc inserted".to_string()
+            } else {
+                clean_str(info[5])
+            };
             let drive_info = clean_str(info[4]);
             discs.push(Drive {
                 drive_number: disc_no + 1,
