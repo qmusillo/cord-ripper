@@ -1,6 +1,10 @@
-# Cord Ripper v1
+# Cord Ripper
 
-Cord Ripper v1 is a tool designed to automate the process of ripping discs and managing media files. It integrates with Discord to provide a user-friendly interface for managing disc ripping operations.
+Cord Ripper is a tool designed to automate the process of ripping discs and managing media files. It integrates with Discord to provide a user-friendly interface for managing disc ripping operations.
+
+## Version
+
+0.0.9 Beta
 
 ## Features
 
