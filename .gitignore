@@ -1,1 +1,3 @@
-./src/discord/components
+/src/discord/components
+/target
+.gitignore
