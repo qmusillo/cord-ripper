@@ -24,8 +24,8 @@ Cord Ripper is a tool designed to automate the process of ripping discs and mana
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/cord-ripper-v1.git
-   cd cord-ripper-v1
+   git clone https://github.com/qmusillo/cord-ripper.git
+   cd cord-ripper
    ```
 
 2. Build the project:
@@ -45,6 +45,10 @@ Cord Ripper is a tool designed to automate the process of ripping discs and mana
    ```bash
    cargo run --release -- --output-dir /path/to/output
    ```
+   or
+   ```bash
+   /path/to/repo/target/release/cord-ripper --output-dir /path/to/output
+   ```
 
 2. Use the Discord bot to interact with the program:
    - `/rip` to start a ripping operation.
@@ -61,7 +65,7 @@ Below are some known issues and limitations of Cord Ripper v1:
 - Some drives may not be recognized depending on the system configuration.
 - Titles may rip out of order based on the disc's file layout.
 
-If you encounter any issues not listed here, please report them via the [GitHub Issues](https://github.com/yourusername/cord-ripper-v1/issues) page.
+If you encounter any issues not listed here, please report them via the [GitHub Issues](https://github.com/qmusillo/cord-ripper/issues) page.
 
 ## Future Updates
 
@@ -72,7 +76,7 @@ The following features and improvements are planned for future releases of Cord 
 - **Ejecting Discs**: Enable disc tray manipulation and cycling via the Discord GUI.
 - **Automated updates**: Implement a system for checking and applying updates automatically.
 
-If you have suggestions for additional features, feel free to submit them via the [GitHub Issues](https://github.com/yourusername/cord-ripper-v1/issues) page.
+If you have suggestions for additional features, feel free to submit them via the [GitHub Issues](https://github.com/qmusillo/cord-ripper/issues) page.
 
 ## Limitations
 
