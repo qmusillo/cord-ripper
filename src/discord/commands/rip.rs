@@ -17,13 +17,12 @@ pub fn register() -> CreateCommand {
     CreateCommand::new("rip").description("Rip a disc")
 }
 
-
 // Wow this is gonna be the biggest roller coater of a function yet!
 /// Runs the rip command
 pub async fn run(ctx: &Context, interaction: &Interaction) {
     debug!("Running rip command");
 
-    // Match the interaction type to it's associated sub function based on 
+    // Match the interaction type to it's associated sub function based on
     // the unique interaction id
     match interaction {
         // The initial command will be handled here, prompting the user to select a disc
@@ -49,7 +48,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                 .unwrap_or_else(|e| {
                     error!("Failed to create response: {:?}", e);
                 });
-            
+
             // Get the drives from the makemkv library
             let drives = match get_drives().await {
                 Ok(drives) => drives,
@@ -289,7 +288,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         error!("Failed to create get_title_of_show_rip modal: {:?}", e);
                     }
                 }
-                // This will be called when the user inputs a title and season 
+                // This will be called when the user inputs a title and season
                 // for a show rip
                 "select_titles_to_rip" => {
                     trace!("Got select_titles_to_rip modal");
@@ -297,7 +296,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                     // Satify the interaction
                     component.defer(&ctx.http).await.unwrap();
 
-                    // The next 3 statements are the same as the previous component 
+                    // The next 3 statements are the same as the previous component
                     // interactions, but for title_name and season as well
                     // This should be safe due to the constant positioning of the
                     // message embed fields
@@ -373,16 +372,15 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
 
                     let num_rips = &rips.len();
                     trace!("Number of rips: {:?}", num_rips);
-                    
+
                     // Satifies rust lifetime issues
                     let mut was_cancelled = false;
-                    
+
                     // Run the rips in sequence, updating the message with the current rip
                     // and allowing the user to cancel the rip
                     // This will be a loop that will run until all rips are complete
                     // or the user cancels the rip
                     for (index, rip) in rips.iter().enumerate() {
-
                         // This should only fail if the rip details are invalid and also
                         // passed previous validation
                         let episode = if let Some(episode) = rip.episode() {
@@ -392,7 +390,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                             continue;
                         };
 
-                        // An async handle to a 'Collector' that will be used to 
+                        // An async handle to a 'Collector' that will be used to
                         // collect a cancel request from the user
                         // This will be used to cancel the rip if the user requests it
                         // This will be a future that will be awaited later
@@ -516,7 +514,6 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         if was_cancelled {
                             break;
                         }
-
                     }
 
                     // If the rip was cancelled, do not send the summary message
@@ -579,14 +576,13 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         error!("Failed to send show rip summary message: {:?}", e);
                     }
                 }
-                // This will be called when the user inputs a title 
+                // This will be called when the user inputs a title
                 // for a movie rip
                 "select_title_to_rip" => {
                     trace!("Got select_title_to_rip modal");
 
                     // Satify the interaction
-                    component.defer(&ctx.http).await.unwrap();  
-
+                    component.defer(&ctx.http).await.unwrap();
 
                     // Same 'needs to be extracted' code as the previous component interactions
                     let drive_number: u8 = match message.embeds[0].fields[1].value.parse() {
@@ -613,7 +609,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                             warn!("Recieved invalid component data, ignoring");
                             return;
                         }
-                    }; 
+                    };
 
                     // Only creates one rip for a movie
                     let rip = Rip {
@@ -843,7 +839,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         )
                         .await
                         .unwrap();
-                    
+
                     // Awaits the title info from makemkv
                     let titles = titles_future.await.unwrap().titles;
 
@@ -865,7 +861,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         .collect();
 
                     trace!("Got options: {:?}", options);
-                    
+
                     // Spawns the select menu for the user to select the title to rip
                     // This will be a single select menu, so the max values is 1
                     message
@@ -965,7 +961,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) {
                         .unwrap();
 
                     let titles = titles_future.await.unwrap().titles;
-                    
+
                     // Creates a vector of select menu options from the title info
                     let options: Vec<CreateSelectMenuOption> = titles
                         .iter()

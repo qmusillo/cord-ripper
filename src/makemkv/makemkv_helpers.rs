@@ -229,7 +229,7 @@ pub async fn get_drives() -> Result<Vec<Drive>> {
             "disc:9999".to_string(),
         ],
     );
-    
+
     // Execute the command and check the output to see if MakeMKV responded
     let output = command.execute().await.map_err(|e| {
         error!("Failed to execute MakeMKV command: {}", e);
