@@ -236,7 +236,7 @@ pub async fn get_drives() -> Result<Vec<Drive>> {
             let inserted_disc = if clean_str(info[5]) == "" {
                 "No disc inserted".to_string()
             } else {
-                clean_str(info[5])
+                clean_str(info[5]).replace("_", " ")
             };
             let drive_info = clean_str(info[4]);
             discs.push(Drive {
