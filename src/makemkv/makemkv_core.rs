@@ -133,11 +133,13 @@ pub struct Rip {
 /// This struct is designed to work with the `MAKE_MKV` instance, which handles the
 /// underlying ripping logic.
 impl Rip {
+    /// Ececutes the ripping process using the `MAKE_MKV` instance.
     pub async fn execute(&self) -> Result<()> {
         MAKE_MKV.lock().await.run_rip(self).await?;
         Ok(())
     }
 
+    /// Returns the episode number if the rip is for a specific episode of a show.
     pub fn episode(&self) -> Option<u8> {
         match self.rip_type {
             RipType::Show { season: _, episode } => Some(episode),
@@ -145,6 +147,7 @@ impl Rip {
         }
     }
 
+    /// Cancels the ripping process and unlocks the drive.
     pub async fn cancel(&self) -> Result<()> {
         MAKE_MKV
             .lock()
@@ -285,6 +288,7 @@ impl MakeMkv {
         MakeMkv { output_dir, drives }
     }
 
+    /// Initializes the `MakeMkv` instance by verifying the existence of MakeMKV and the output directory.
     pub async fn init(&mut self, output_dir: &str) -> Result<()> {
         let makemkv_exists = makemkv_exists().await;
 
@@ -315,8 +319,11 @@ impl MakeMkv {
         Ok(())
     }
 
+    /// Locks a specific drive to prevent concurrent access during the ripping process.
     async fn lock_drive(&mut self, drive_number: u8) -> Result<()> {
+        // Lock the drives mutex to ensure thread safety
         let mut drives = self.drives.lock().await;
+        // Check if the drive is already in use
         if drives.contains(&drive_number) {
             error!("Drive {} is already in use", drive_number);
             return Err(MakeMkvError::DriveInUseError(drive_number));
@@ -326,20 +333,25 @@ impl MakeMkv {
         Ok(())
     }
 
+    /// Unlocks a specific drive after the ripping process is complete.
     async fn unlock_drive(&mut self, drive_number: u8) -> Result<()> {
+        // Lock the drives mutex to ensure thread safety
         let mut drives = self.drives.lock().await;
         drives.remove(&drive_number);
         debug!("Unlocked drive {}", drive_number);
         Ok(())
     }
 
+    /// Executes the ripping process for a specific drive and title, saving the output to the appropriate directory.
     pub async fn run_rip(&mut self, rip_details: &Rip) -> Result<()> {
         info!(
             "Starting rip for drive {}: {}",
             rip_details.drive_number, rip_details.title
         );
+
         self.lock_drive(rip_details.drive_number).await?;
 
+        // Create a temporary output directory for the raw makemkv files to be saved to
         let temp_output_dir = TempDir::with_prefix_in("makemkv_output", &self.output_dir)
             .map_err(|_| MakeMkvError::TempDirError)?;
 
@@ -348,10 +360,14 @@ impl MakeMkv {
             temp_output_dir.path().display()
         );
 
+        // Construct the MakeMKV command
+        // The drive number is 0-indexed in the command, so we subtract 1
         let dev_path = format!("dev:/dev/sr{}", rip_details.drive_number - 1);
 
+        // The title_id is 0-indexed in the command, so we subtract 1
         let title_id = rip_details.title_id - 1;
 
+        // Construct the command to execute
         let command = MakeMkvCommands::new(
             "makemkvcon",
             vec![
@@ -367,11 +383,13 @@ impl MakeMkv {
         debug!("Executing command: {} {:?}", command.command, command.args);
         let start_rip_time = Instant::now();
 
+        // Execute the command and capture the output
         let output = command.execute().await.map_err(|e| {
             error!("Failed to execute MakeMKV command: {}", e);
             MakeMkvError::CommandExecutionError(e.to_string())
         })?;
 
+        // Unlock the drive after ripping regardless of success
         self.unlock_drive(rip_details.drive_number).await?;
 
         trace!("MakeMKV output: {:?}", output);
@@ -384,6 +402,7 @@ impl MakeMkv {
             }
         };
 
+        //Calculate the size of the ripped files and rate of ripping
         let rip_size: f64 = fs_extra::dir::get_size(temp_output_dir.path())
             .map_err(|_| MakeMkvError::FailedToSaveDisc)? as f64
             / (1024.0 * 1024.0);
@@ -395,12 +414,14 @@ impl MakeMkv {
             rip_details.title, rip_time, rate
         );
 
+        // Get the list of mkv files in the temporary output directory
         let ripped_files: Vec<PathBuf> = std::fs::read_dir(temp_output_dir.path())
             .map_err(|_| MakeMkvError::TempDirError)?
             .filter_map(|entry| entry.ok().map(|e| e.path()))
             .filter(|path| path.is_file() && path.extension().map_or(false, |ext| ext == "mkv"))
             .collect();
 
+        // Check if any MKV files were found
         if ripped_files.is_empty() {
             error!("No MKV files were found in the temporary output directory");
             return Err(MakeMkvError::FailedToSaveDisc);
@@ -409,7 +430,9 @@ impl MakeMkv {
         let ripped_file = ripped_files.first().unwrap();
         debug!("Ripped file: {}", ripped_file.display());
 
+        // Create the destination directory based on the rip type
         // This is garbage, please fix you lazy shit
+        // Future me: nah push it
         let (destination_dir, destination_path) = match rip_details.rip_type {
             RipType::Movie => (
                 self.output_dir
@@ -437,6 +460,7 @@ impl MakeMkv {
 
         debug!("Created output directory: {}", destination_dir.display());
 
+        // Move the ripped file to the destination directory
         std::fs::rename(ripped_file, &destination_path)
             .map_err(|_| MakeMkvError::FailedToSaveDisc)?;
         debug!(
@@ -445,6 +469,7 @@ impl MakeMkv {
             destination_path.display()
         );
 
+        // Clean up the temporary output directory
         temp_output_dir.close()?;
         debug!("Closed temporary output directory");
 
