@@ -33,7 +33,10 @@ Cord Ripper is a tool designed to automate the process of ripping discs and mana
    cargo build --release
    ```
 
-3. Set the required environment variables:
+3. Create a Discord Bot in the Discord [Developer Portal](https://discord.com/developers/applications). 
+   You can follow instructions [here](https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot).
+
+4. Set the required environment variables:
    ```bash
    export DISCORD_TOKEN=your_discord_bot_token
    export GUILD_ID=your_guild_id
@@ -57,7 +60,7 @@ Cord Ripper is a tool designed to automate the process of ripping discs and mana
 
 ## Known Issues
 
-Below are some known issues and limitations of Cord Ripper v1:
+Below are some known issues and limitations of Cord Ripper:
 
 - Errors may occur if MakeMKV is not properly installed or configured.
 - The Discord bot may fail to respond if the token or guild ID is incorrect.
