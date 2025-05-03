@@ -1,4 +1,4 @@
-mod errors;
+pub mod errors;
 pub mod makemkv_core;
 pub mod makemkv_helpers;
 pub mod processes;

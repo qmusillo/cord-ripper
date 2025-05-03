@@ -46,6 +46,7 @@
 #![warn(clippy::pedantic)]
 
 pub mod discord;
+pub mod errors;
 pub mod logging;
 pub mod makemkv;
 

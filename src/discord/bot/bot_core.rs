@@ -7,13 +7,16 @@ use serenity::async_trait;
 use serenity::model::{application::Interaction, gateway::Ready};
 use serenity::prelude::*;
 
-use crate::discord::commands;
+use crate::discord::errors::DiscordError;
+use crate::discord::{commands, errors::Result};
 use crate::{debug, error, info, trace};
 
 #[async_trait]
 impl EventHandler for DiscordHandler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        handle_interaction(&ctx, &interaction).await;
+        if let Err(err) = handle_interaction(&ctx, &interaction).await {
+            error!("Error handling interaction: {:?}", err);
+        }
     }
 
     async fn ready(&self, ctx: Context, _ready: Ready) {
@@ -51,84 +54,95 @@ impl EventHandler for DiscordHandler {
     }
 }
 
-pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
+pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) -> Result<()> {
     trace!("Received interaction: {:?}", interaction);
     match interaction {
         Interaction::Command(command) => match command.data.name.as_str() {
             "rip" => {
                 trace!("Got rip command");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "view_drives" => {
                 trace!("Got view_drives command");
                 commands::view_drives::run(ctx, interaction).await;
+                Ok(())
             }
             "eject_disc" => {
                 trace!("Got eject_disc command");
                 commands::eject_disc::run();
+                Ok(())
             }
             "get_titles" => {
                 trace!("Got get_titles command");
                 commands::get_titles::run(ctx, interaction).await;
+                Ok(())
             }
             _ => {
                 debug!("Unknown command: {}, ignoring", command.data.name);
-                return;
+                return Err(DiscordError::InvalidInteractionCall);
             }
         },
         Interaction::Component(component) => match component.data.custom_id.as_str() {
             "select_disc_to_grab_titles" => {
                 trace!("Got select_disc_to_grab_titles component");
                 commands::get_titles::run(ctx, interaction).await;
+                Ok(())
             }
             "select_disc_to_rip" => {
                 trace!("Got select_disc_to_rip component");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "movie_rip" => {
                 trace!("Got movie_rip component");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "show_rip" => {
                 trace!("Got show_rip component");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "select_titles_to_rip" => {
                 trace!("Got select_titles_to_rip component");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "select_title_to_rip" => {
                 trace!("Got select_title_to_rip component");
-                commands::rip::run(ctx, interaction).await;
+                commands::rip::run(ctx, interaction).await?;
+                Ok(())
             }
             "cancel_rip" => {
                 trace!("Got cancel_rip component");
+                Ok(())
             }
             _ => {
                 debug!("Unknown component: {}, ignoring", component.data.custom_id);
-                return;
+                Ok(())
             }
         },
         Interaction::Modal(modal) => {
             match modal.data.custom_id.as_str() {
                 "get_title_of_movie_rip" => {
                     trace!("Got get_title_of_movie_rip modal");
-                    commands::rip::run(ctx, interaction).await;
+                    commands::rip::run(ctx, interaction).await?;
                 }
                 "get_title_of_show_rip" => {
                     trace!("Got get_title_of_show_rip modal");
-                    commands::rip::run(ctx, interaction).await;
+                    commands::rip::run(ctx, interaction).await?;
                 }
                 _ => {
                     debug!("Unknown modal: {}, ignoring", modal.data.custom_id);
-                    return;
+                    return Err(DiscordError::InvalidInteractionCall);
                 }
             }
-            return;
+            return Err(DiscordError::InvalidInteractionCall);
         }
         _ => {
             debug!("Unknown interaction type: {:?}, ignoring", interaction);
-            return;
+            return Err(DiscordError::InvalidInteractionCall);
         }
     }
 }
