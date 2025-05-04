@@ -138,7 +138,7 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) -> Res
                     return Err(DiscordError::InvalidInteractionCall);
                 }
             }
-            return Err(DiscordError::InvalidInteractionCall);
+            Ok(())
         }
         _ => {
             debug!("Unknown interaction type: {:?}, ignoring", interaction);
