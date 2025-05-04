@@ -891,11 +891,10 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                     // Awaits the title info from makemkv
                     let titles = titles_future.await.unwrap().titles;
 
-                    // Creates a vector of select menu options from the title info
-                    // This will be used to create the select menu for the user to select
-                    // the title to rip
+                    // Limit the options to the first 25 to comply with Discord API's limit
                     let options: Vec<CreateSelectMenuOption> = titles
                         .iter()
+                        .take(25)
                         .map(|title| {
                             let title_details =
                                 format!("Title: {}, Duration: {}", title.title_id, title.length);
@@ -910,8 +909,47 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
 
                     trace!("Got options: {:?}", options);
 
+                    if options.len() < 1 {
+                        warn!("No titles found for disc number: {}", drive_number);
+                        message
+                            .clone()
+                            .edit(
+                                &ctx.http,
+                                EditMessage::new().components(vec![]).embed(
+                                    CreateEmbed::new()
+                                        .title("Rip Failed")
+                                        .description("No titles found for this disc number")
+                                        .field("Disc Number", drive_number.to_string(), true)
+                                        .color(0xfe0000),
+                                ),
+                            )
+                            .await
+                            .map_err(|e| {
+                                error!("Failed to send no titles found message: {:?}", e);
+                                return DiscordError::EditMessageFailed(e.to_string())
+                            })?;
+                        return Err(DiscordError::Unexpected(
+                            "No titles found for disc number".to_string(),
+                        ));
+                    }
+
+                    // Add a note to the embed if some titles were excluded
+                    let mut embed = CreateEmbed::new()
+                        .title("Rip Movie")
+                        .description("Please select title to rip")
+                        .field("Title", &title, true)
+                        .field("Disc Number", drive_number.to_string(), true)
+                        .color(0xfe0000);
+
+                    if titles.len() > 25 {
+                        embed = embed.field(
+                            "Note",
+                            "Only the first 25 titles are shown due to Discord API limitations.",
+                            false,
+                        );
+                    }
+
                     // Spawns the select menu for the user to select the title to rip
-                    // This will be a single select menu, so the max values is 1
                     message
                         .clone()
                         .edit(
@@ -925,17 +963,13 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                                         CreateSelectMenuKind::String { options },
                                     ),
                                 )])
-                                .embed(
-                                    CreateEmbed::new()
-                                        .title("Rip Movie")
-                                        .description("Please select title to rip")
-                                        .field("Title", &title, true)
-                                        .field("Disc Number", drive_number.to_string(), true)
-                                        .color(0xfe0000),
-                                ),
+                                .embed(embed),
                         )
                         .await
-                        .unwrap();
+                        .map_err(|e| {
+                            error!("Failed to send select title menu: {:?}", e);
+                            DiscordError::EditMessageFailed(e.to_string())
+                        })?;
 
                     Ok(())
                 }
@@ -1015,9 +1049,10 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
 
                     let titles = titles_future.await.unwrap().titles;
 
-                    // Creates a vector of select menu options from the title info
+                    // Limit the options to the first 25 to comply with Discord API's limit
                     let options: Vec<CreateSelectMenuOption> = titles
                         .iter()
+                        .take(25)
                         .map(|title| {
                             let title_details =
                                 format!("Title: {}, Duration: {}", title.title_id, title.length);
@@ -1030,6 +1065,47 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                         })
                         .collect();
 
+                    trace!("Got options: {:?}", options);
+
+                    if options.len() < 1 {
+                        warn!("No titles found for disc number: {}", drive_number);
+                        message
+                            .clone()
+                            .edit(
+                                &ctx.http,
+                                EditMessage::new().components(vec![]).embed(
+                                    CreateEmbed::new()
+                                        .title("Rip Failed")
+                                        .description("No titles found for this disc number")
+                                        .field("Disc Number", drive_number.to_string(), true)
+                                        .color(0xfe0000),
+                                ),
+                            )
+                            .await
+                            .map_err(|e| {
+                                error!("Failed to send no titles found message: {:?}", e);
+                                return DiscordError::EditMessageFailed(e.to_string())
+                            })?;
+                        return Err(DiscordError::Unexpected(
+                            "No titles found for disc number".to_string(),
+                        ));
+                    }
+
+                    // Add a note to the embed if some titles were excluded
+                    let mut embed = CreateEmbed::new()
+                        .title("Rip Show")
+                        .description("Please select titles to rip")
+                        .field("Title", &title, true)
+                        .field("Disc Number", drive_number.to_string(), true)
+                        .color(0xfe0000);
+
+                    if titles.len() > 25 {
+                        embed = embed.field(
+                            "Note",
+                            "Only the first 25 titles are shown due to Discord API limitations.",
+                            false,
+                        );
+                    }
                     trace!("Got options: {:?}", options);
 
                     let max_values = options.len() as u8;
@@ -1052,18 +1128,13 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                                     .min_values(1)
                                     .max_values(max_values),
                                 )])
-                                .embed(
-                                    CreateEmbed::new()
-                                        .title("Rip Show")
-                                        .description("Please select titles to rip")
-                                        .field("Title", &title, true)
-                                        .field("Disc Number", drive_number.to_string(), true)
-                                        .field("Season", season, true)
-                                        .color(0xfe0000),
-                                ),
+                                .embed(embed),
                         )
                         .await
-                        .unwrap();
+                        .map_err(|e| {
+                            error!("Failed to send select titles menu: {:?}", e);
+                            DiscordError::EditMessageFailed(e.to_string())
+                        })?;
 
                     Ok(())
                 }
