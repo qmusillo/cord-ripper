@@ -1097,6 +1097,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                         .description("Please select titles to rip")
                         .field("Title", &title, true)
                         .field("Disc Number", drive_number.to_string(), true)
+                        .field("Season", season, true)
                         .color(0xfe0000);
 
                     if titles.len() > 25 {
