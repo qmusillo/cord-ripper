@@ -158,7 +158,7 @@ impl Rip {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RipType {
     Movie,
     /// Represents a TV show with associated season and episode information.
@@ -383,6 +383,50 @@ impl MakeMkv {
         debug!("Executing command: {} {:?}", command.command, command.args);
         let start_rip_time = Instant::now();
 
+        // Create the destination directory based on the rip type
+        // This is garbage, please fix you lazy shit
+        // Future me: nah push it
+        let (destination_dir, destination_path) = match rip_details.rip_type {
+            RipType::Movie => (
+                self.output_dir
+                    .join(format!("movies/{}", rip_details.title)),
+                self.output_dir
+                    .join(format!(
+                        "movies/{}/{}",
+                        rip_details.title, rip_details.title
+                    ))
+                    .with_extension("mkv"),
+            ),
+            RipType::Show { season, episode } => (
+                self.output_dir
+                    .join(format!("shows/{}/Season {}", rip_details.title, season)),
+                self.output_dir
+                    .join(format!(
+                        "shows/{}/Season {}/Episode {}",
+                        rip_details.title, season, episode
+                    ))
+                    .with_extension("mkv"),
+            ),
+        };
+
+        debug!(
+            "Destination directory: {}",
+            destination_dir.to_string_lossy()
+        );
+        debug!("Destination path: {}", destination_path.to_string_lossy());
+
+        if destination_path.exists()
+            && destination_path.is_file()
+            && rip_details.rip_type == RipType::Movie
+        {
+            error!("File already exists: {}", destination_path.display());
+            // Unlock the drive before returning
+            self.unlock_drive(rip_details.drive_number).await?;
+            return Err(MakeMkvError::FileAlreadyExists(
+                destination_path.to_string_lossy().to_string(),
+            ));
+        }
+
         // Execute the command and capture the output
         let output = command.execute().await.map_err(|e| {
             error!("Failed to execute MakeMKV command: {}", e);
@@ -429,32 +473,6 @@ impl MakeMkv {
 
         let ripped_file = ripped_files.first().unwrap();
         debug!("Ripped file: {}", ripped_file.display());
-
-        // Create the destination directory based on the rip type
-        // This is garbage, please fix you lazy shit
-        // Future me: nah push it
-        let (destination_dir, destination_path) = match rip_details.rip_type {
-            RipType::Movie => (
-                self.output_dir
-                    .join(format!("movies/{}", rip_details.title)),
-                self.output_dir
-                    .join(format!(
-                        "movies/{}/{}",
-                        rip_details.title, rip_details.title
-                    ))
-                    .with_extension("mkv"),
-            ),
-            RipType::Show { season, episode } => (
-                self.output_dir
-                    .join(format!("shows/{}/Season {}", rip_details.title, season)),
-                self.output_dir
-                    .join(format!(
-                        "shows/{}/Season {}/Episode {}",
-                        rip_details.title, season, episode
-                    ))
-                    .with_extension("mkv"),
-            ),
-        };
 
         std::fs::create_dir_all(&destination_dir).map_err(|_| MakeMkvError::OutputDirError)?;
 

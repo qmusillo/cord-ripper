@@ -8,7 +8,7 @@ use serenity::all::{
 };
 use serenity::builder::CreateEmbed;
 
-use crate::makemkv::{get_drives, get_title_info, Rip, RipType};
+use crate::makemkv::{errors::MakeMkvError, get_drives, get_title_info, Rip, RipType};
 
 use crate::discord::errors::{DiscordError, Result};
 
@@ -22,7 +22,7 @@ pub fn register() -> CreateCommand {
 // Wow this is gonna be the biggest roller coater of a function yet!
 /// Runs the rip command
 pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
-    debug!("Running rip command");
+    debug!("Rip command was called");
 
     // Match the interaction type to it's associated sub function based on
     // the unique interaction id
@@ -79,14 +79,21 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                 }
             };
 
-            // Iter over the drives and create a 'select menu option' for each drive
+            // Use a HashSet to track unique values and ensure no duplicates
+            let mut seen_values = std::collections::HashSet::new();
+            // Create a vector of select menu options for each drive
             let options: Vec<CreateSelectMenuOption> = drives
                 .iter()
-                .map(|drive| {
-                    CreateSelectMenuOption::new(
-                        format!("Disc {}: {}", drive.drive_number, drive.drive_media_title),
-                        format!("disc_{}", drive.drive_number),
-                    )
+                .filter_map(|drive| {
+                    let value = format!("disc_{}", drive.drive_number);
+                    if seen_values.insert(value.clone()) {
+                        Some(CreateSelectMenuOption::new(
+                            format!("Disc {}: {}", drive.drive_number, drive.drive_media_title),
+                            value,
+                        ))
+                    } else {
+                        None
+                    }
                 })
                 .collect();
 
@@ -698,12 +705,34 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                         rip_result = rip.execute() => {
                             if let Err(e) = rip_result {
                                 error!("Failed to execute rip: {:?}", e);
-                                if let Err(e) = message
+
+                                if let MakeMkvError::FileAlreadyExists(_) = e {
+                                    if let Err(e) = message
+                                        .clone()
+                                        .edit(
+                                            &ctx.http,
+                                            EditMessage::new().components(vec![])
+                                                .embed(
+                                                    CreateEmbed::new()
+                                                        .title("Rip Failed")
+                                                        .timestamp(Timestamp::now())
+                                                        .description("This movie is already on the server!")
+                                                        .field("Title", &rip.title, true)
+                                                        .field("Disc Number", drive_number.to_string(), true)
+                                                        .color(0xfe0000),
+                                                )
+                                        )
+                                        .await
+                                    {
+                                        error!("Failed to send rip failed message: {:?}", e);
+                                    }
+                                } else {
+                                    if let Err(e) = message
                                     .clone()
                                     .edit(
                                         &ctx.http,
                                         EditMessage::new().components(vec![])
-                                        .embed(
+                                            .embed(
                                             CreateEmbed::new()
                                                 .title("Rip Failed")
                                                 .timestamp(Timestamp::now())
@@ -717,6 +746,9 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                                 {
                                     error!("Failed to send rip failed message: {:?}", e);
                                 }
+                                }
+
+                                return Err(DiscordError::MakeMkvError(e));
                             }
                             false
 
@@ -926,7 +958,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                             .await
                             .map_err(|e| {
                                 error!("Failed to send no titles found message: {:?}", e);
-                                return DiscordError::EditMessageFailed(e.to_string())
+                                return DiscordError::EditMessageFailed(e.to_string());
                             })?;
                         return Err(DiscordError::Unexpected(
                             "No titles found for disc number".to_string(),
@@ -1084,7 +1116,7 @@ pub async fn run(ctx: &Context, interaction: &Interaction) -> Result<()> {
                             .await
                             .map_err(|e| {
                                 error!("Failed to send no titles found message: {:?}", e);
-                                return DiscordError::EditMessageFailed(e.to_string())
+                                return DiscordError::EditMessageFailed(e.to_string());
                             })?;
                         return Err(DiscordError::Unexpected(
                             "No titles found for disc number".to_string(),

@@ -3,7 +3,7 @@ use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, MakeMkvError>;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum MakeMkvError {
     #[error("Failed to execute MakeMKV command: {0}")]
     CommandExecutionError(String),
@@ -43,6 +43,9 @@ pub enum MakeMkvError {
 
     #[error("Failed to parse MakeMKV output: {0}")]
     ParseError(String),
+
+    #[error("Directory already exists!{0}")]
+    FileAlreadyExists(String),
 }
 
 // Example usage
