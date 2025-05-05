@@ -332,7 +332,7 @@ pub fn parse_disc_info(output: &Output) -> Result<DiscInfo> {
                 disc_info.disc_name = clean_info(info);
             }
         } else if line.starts_with("TINFO") {
-            let mut title_code: u8 = info[0].split(":").last().unwrap().parse()?;
+            let mut title_code: u16 = info[0].split(":").last().unwrap().parse()?;
             title_code = title_code + 1;
 
             title_info.title_id = title_code as u16;
